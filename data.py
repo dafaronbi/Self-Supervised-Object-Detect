@@ -13,20 +13,19 @@ from torch import nn, Tensor
 from torchvision.transforms import functional as F, InterpolationMode, transforms as T
 
 #dictionary transforming a label to index
-label_to_num = {'car': 0, 'chair': 1, 'horse': 2, 'fox': 3, 'laptop': 4, 'tie': 5, 'bathing cap': 6, 'baby bed': 7, 
-'snake': 8, 'orange': 9, 'sheep': 10, 'koala bear': 11, 'lemon': 12, 'guitar': 13, 'bagel': 14, 'dog': 15, 
-'airplane': 16, 'monkey': 17, 'ski': 18, 'sofa': 19, 'watercraft': 20, 'tiger': 21, 'wine bottle': 22, 
-'sunglasses': 23, 'butterfly': 24, 'whale': 25, 'goldfish': 26, 'hippopotamus': 27, 'drum': 28, 
-'coffee maker': 29, 'stove': 30, 'cart': 31, 'red panda': 32, 'mushroom': 33, 'traffic light': 34, 
-'dragonfly': 35, 'harp': 36, 'croquet ball': 37, 'bookshelf': 38, 'computer keyboard': 39, 'rabbit': 40,
- 'helmet': 41, 'hat with a wide brim': 42, 'strawberry': 43, 'antelope': 44, 'purse': 45, 'lobster': 46, 
- 'skunk': 47, 'fig': 48, 'bird': 49, 'apple': 50, 'bicycle': 51, 'piano': 52, 'miniskirt': 53, 'bear': 54, 
- 'cattle': 55, 'dumbbell': 56, 'person': 57, 'flower pot': 58, 'tape player': 59, 'tv or monitor': 60,
-  'ray': 61, 'crutch': 62, 'microphone': 63, 'pitcher': 64, 'starfish': 65, 'elephant': 66, 'camel': 67, 
-  'banana': 68, 'swine': 69, 'seal': 70, 'jellyfish': 71, 'artichoke': 72, 'domestic cat': 73, 'bus': 74,
-   'frog': 75, 'salt or pepper shaker': 76, 'cup or mug': 77, 'backpack': 78, 'pretzel': 79, 'pomegranate': 80, 
-   'lamp': 81, 'otter': 82, 'violin': 83, 'motorcycle': 84, 'bench': 85, 'bowl': 86, 'train': 87, 'axe': 88, 
-   'ladybug': 89, 'table': 90, 'porcupine': 91, 'bell pepper': 92, 'lizard': 93, 'cream': 94, 'nail': 95, 'turtle': 96}
+label_to_num = {'motorcycle': 0, 'crutch': 1, 'sunglasses': 2, 'harp': 3, 'fox': 4, 'whale': 5, 'cattle': 6, 
+'hippopotamus': 7, 'turtle': 8, 'otter': 9, 'sofa': 10, 'violin': 11, 'bowl': 12, 'jellyfish': 13, 'apple': 14, 'tie': 15, 
+'red panda': 16, 'skunk': 17, 'rabbit': 18, 'bench': 19, 'frog': 20, 'drum': 21, 'cup or mug': 22, 'lemon': 23, 'beaker': 24, 
+'mushroom': 25, 'dragonfly': 26, 'bookshelf': 27, 'cucumber': 28, 'backpack': 29, 'airplane': 30, 'salt or pepper shaker': 31, 
+'antelope': 32, 'bird': 33, 'piano': 34, 'koala bear': 35, 'guitar': 36, 'cream': 37, 'domestic cat': 38, 'bicycle': 39, 
+'croquet ball': 40, 'ray': 41, 'pomegranate': 42, 'coffee maker': 43, 'flower pot': 44, 'lizard': 45, 'fig': 46, 'ski': 47, 
+'pitcher': 48, 'elephant': 49, 'monkey': 50, 'banana': 51, 'person': 52, 'table': 53, 'sheep': 54, 'orange': 55, 'bus': 56, 
+'artichoke': 57, 'horse': 58, 'dumbbell': 59, 'miniskirt': 60, 'traffic light': 61, 'laptop': 62, 'goldfish': 63, 'dog': 64, 
+'bagel': 65, 'wine bottle': 66, 'baby bed': 67, 'car': 68, 'nail': 69, 'helmet': 70, 'butterfly': 71, 'stove': 72, 'bear': 73, 
+'seal': 74, 'cart': 75, 'axe': 76, 'tiger': 77, 'tape player': 78, 'chair': 79, 'computer keyboard': 80, 'porcupine': 81, 
+'train': 82, 'strawberry': 83, 'lobster': 84, 'starfish': 85, 'ladybug': 86, 'camel': 87, 'swine': 88, 'pretzel': 89, 
+'hat with a wide brim': 90, 'bell pepper': 91, 'snake': 92, 'tv or monitor': 93, 'bathing cap': 94, 'zebra': 95, 'lamp': 96, 
+'purse': 97, 'watercraft': 98, 'microphone': 99}
 
 
 
@@ -34,6 +33,7 @@ label_to_num = {'car': 0, 'chair': 1, 'horse': 2, 'fox': 3, 'laptop': 4, 'tie': 
 def get_transform(train):
     transforms = []
     transforms.append(T.PILToTensor())
+    transforms.append(T.Resize((224,224)))
     transforms.append(T.ConvertImageDtype(torch.float))
     if train:
         transforms.append(T.RandomHorizontalFlip(0.5))
@@ -60,9 +60,11 @@ class labelled_data(torch.utils.data.Dataset):
         with open(label_path) as f:
             labels = yaml.safe_load(f)
 
+        labels['bboxes_norm'] = torch.as_tensor([[bbox[0] / labels['image_size'][0], bbox[1] / labels['image_size'][1],
+        bbox[2] / labels['image_size'][0], bbox[3] / labels['image_size'][1]] for bbox in labels['bboxes']], dtype=torch.float32)
         labels['bboxes'] = torch.as_tensor(labels['bboxes'], dtype=torch.int64)
         labels['image_size'] = torch.as_tensor(labels['image_size'], dtype=torch.int64)
-        labels['labels'] = torch.as_tensor([ label_to_num[label] for label in labels['labels']], dtype=torch.int64)
+        labels['labels'] = torch.as_tensor(torch.nn.functional.one_hot(torch.as_tensor([ label_to_num[label] for label in labels['labels']], dtype=torch.int64), num_classes=100), dtype=torch.float32)
 
         if self.transforms is not None:
             image = self.transforms(image)
@@ -70,4 +72,4 @@ class labelled_data(torch.utils.data.Dataset):
         return image,labels
 
     def __len__(self):
-        return len(slef.images)
+        return len(self.images)
