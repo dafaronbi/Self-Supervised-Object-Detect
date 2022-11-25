@@ -9,7 +9,7 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 #set training parameters
-epochs = 100
+epochs = 1
 lr = 0.001
 save_path = "saved_model.pt"
 
@@ -17,14 +17,15 @@ save_path = "saved_model.pt"
 network = model.resNet()
 
 #get training and validation datasets
-training_data = data.labelled_data("labeled_data", "training", data.get_transform(train=True))
-validation_data = data.labelled_data("labeled_data", "validation", data.get_transform(train=True))
+training_data = data.labeled_data("labeled_data", "training", data.get_transform(train=True))
+validation_data = data.labeled_data("labeled_data", "validation", data.get_transform(train=True))
 
 #get training and validation dataloaders
 training_loader = torch.utils.data.DataLoader(training_data, batch_size=8, shuffle=True, collate_fn=collate_fn)
 validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=8, shuffle=True, collate_fn=collate_fn)
 
-label_criterion = torch.nn.CrossEntropyLoss()
+# label_criterion = torch.nn.CrossEntropyLoss()
+label_criterion = torch.nn.MSELoss()
 bbox_criterion = torch.nn.MSELoss()
 
 optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
@@ -48,10 +49,10 @@ for epoch in range(epochs):
         # zero the parameter gradients
         optimizer.zero_grad()
 
-        # forward + backward + optimize
-        p_labels, p_bboxes = network(inputs)
+        # forward + backward + optimize 
+        p_dict = network(inputs)
 
-        loss = sum([label_criterion(p_labels, t_labels), bbox_criterion(p_bboxes, t_bboxes)])
+        loss = sum([label_criterion(p_dict["labels"], t_labels), bbox_criterion(p_dict["boxes"], t_bboxes)])
         loss.backward()
         optimizer.step()
 
