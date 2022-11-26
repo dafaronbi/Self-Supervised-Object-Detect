@@ -48,10 +48,10 @@ class_dict = {
 def get_transform(train):
     transforms = []
     transforms.append(T.PILToTensor())
-    transforms.append(T.Resize((224,224)))
-    transforms.append(T.ConvertImageDtype(torch.float))
-    if train:
-        transforms.append(T.RandomHorizontalFlip(0.5))
+    # transforms.append(T.Resize((224,224)))
+    # transforms.append(T.ConvertImageDtype(torch.float))
+    # if train:
+    #     transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
 
 class labeled_data(torch.utils.data.Dataset):
@@ -81,8 +81,8 @@ class labeled_data(torch.utils.data.Dataset):
         target = {}
         target['bboxes_norm'] = torch.as_tensor([[bbox[0] / labels['image_size'][0], bbox[1] / labels['image_size'][1],
         bbox[2] / labels['image_size'][0], bbox[3] / labels['image_size'][1]] for bbox in labels['bboxes']], dtype=torch.float32)
-        target['bboxes'] = torch.as_tensor(labels['bboxes'], dtype=torch.int64)
-        target['image_size'] = torch.as_tensor(labels['image_size'], dtype=torch.int64)
+        target['bboxes'] = torch.as_tensor(labels['bboxes'], dtype=torch.float32)
+        target['image_size'] = torch.as_tensor(labels['image_size'], dtype=torch.float32)
         # target['labels'] = torch.as_tensor(torch.nn.functional.one_hot(torch.as_tensor([ class_dict[label] for label in labels['labels']], dtype=torch.int64), num_classes=100), dtype=torch.float32)
         target["labels"] = torch.as_tensor([ class_dict[label] for label in labels['labels']], dtype=torch.float32)
         target["image_id"] = torch.as_tensor([idx])
