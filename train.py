@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 #set training parameters
-epochs = 1
+epochs = 300
 lr = 0.001
 save_path = "saved_model.pt"
 
