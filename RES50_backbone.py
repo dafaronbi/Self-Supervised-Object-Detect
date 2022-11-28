@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import time
 import os
 import copy
+import glob
+from pretext_dataset import *
+import torch.utils.data
 
 # Data augmentation and normalization for training
 # Just normalization for validation
@@ -26,17 +29,23 @@ data_transforms = {
     ]),
 }
 
-data_dir = "C:/Users/varsh/Documents/Courses/DL/Project/data/backbone"
-image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
-                                          data_transforms[x])
-                  for x in ['train', 'val']}
-dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4,
-                                             shuffle=True, num_workers=1)
-              for x in ['train', 'val']}
+data_dir = "C:/Users/varsh/Documents/Courses/DL/Project/data/unlabeled_vv"
+images_list = glob.glob(f'{data_dir}/*.PNG')
+
+train_dataset0 = RotationDataset(images_list[:10],0)
+train_dataset1 = RotationDataset(images_list[:10],90)
+train_dataset2 = RotationDataset(images_list[:10],180)
+train_dataset3 = RotationDataset(images_list[:10],270)
+train_dataset = torch.utils.data.ConcatDataset([train_dataset0,train_dataset1,train_dataset2,train_dataset3])
+val_dataset = RotationDataset(images_list[10:12],180)
+
+image_datasets = {"train": train_dataset,"val":val_dataset}
+dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4,shuffle=True, num_workers=1)
+                for x in ['train','val']}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 print(dataset_sizes)
-class_names = image_datasets['train'].classes
-print(class_names)
+# class_names = image_datasets['train'].classes
+# print(class_names)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

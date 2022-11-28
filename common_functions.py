@@ -19,14 +19,14 @@ torch.manual_seed(0)
 
         
 
-def pretextTask_DataGeneration(data_path):
+def pretextTask_DataGeneration(data_path,target_folder):
 
     images_list = glob.glob(f'{data_path}/*.PNG')
     number_images = len(images_list)
 
     angles = [0,90,180,270]
     folders = ["train","val"]
-    target_folder = os.path.normpath(data_path + os.sep + os.pardir)
+    # target_folder = os.path.normpath(data_path + os.sep + os.pardir)
     for folder in folders:
         for angle in angles:
             if(os.path.exists(f"{target_folder}/backbone/{folder}/{angle}")):
