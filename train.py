@@ -11,14 +11,15 @@ from torch.utils.tensorboard import SummaryWriter
 epochs = 300
 lr = 0.001
 save_path = "saved_model.pt"
+data_path = "labeled_data"
 
 #function for batching dataloader
 def collate_fn(batch):
     return tuple(zip(*batch))
 
 #get training and validation datasets
-training_data = data.labeled_data("labeled_data", "training", data.get_transform(train=True))
-validation_data = data.labeled_data("labeled_data", "validation", data.get_transform(train=True))
+training_data = data.labeled_data(data_path, "training", data.get_transform(train=True))
+validation_data = data.labeled_data(data_path, "validation", data.get_transform(train=True))
 
 #get training and validation dataloaders
 training_loader = torch.utils.data.DataLoader(training_data, batch_size=8, shuffle=True, collate_fn=collate_fn)
