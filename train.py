@@ -69,14 +69,14 @@ for epoch in range(epochs):
                 if j < num_boxes:
                     label_loss_j = label_criterion(p_dict["labels"][j],t_labels[i][j])
                     bbox_loss_j = bbox_criterion(p_dict["boxes"][j],t_bboxes[i][j])
-                    score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(1.0))
+                    score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
                     label_loss += label_loss_j
                     bbox_loss += bbox_loss_j
                     score_loss += score_loss_j
                     loss += sum([label_loss_j, bbox_loss_j, score_loss_j])
                 #only calculate loss on score when there is not ground truth bbox
                 else:
-                    score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(0.0))
+                    score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(0.0).to(device))
                     score_loss += score_loss_j
                     loss +=  score_loss_j
 
