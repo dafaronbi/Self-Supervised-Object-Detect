@@ -16,9 +16,6 @@ save_path = "saved_model.pt"
 def collate_fn(batch):
     return tuple(zip(*batch))
 
-#load model
-network = model.resNet()
-
 #get training and validation datasets
 training_data = data.labeled_data("labeled_data", "training", data.get_transform(train=True))
 validation_data = data.labeled_data("labeled_data", "validation", data.get_transform(train=True))
@@ -32,10 +29,15 @@ label_criterion = torch.nn.MSELoss()
 bbox_criterion = torch.nn.MSELoss()
 score_criterion = torch.nn.MSELoss()
 
-optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
-
 # train on the GPU or on the CPU, if a GPU is not available
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+#load model
+network = model.resNet(device)
+network = network.to(device)
+
+#initialize optimizer
+optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
 
 #log for tensorboard
 writer = SummaryWriter()
@@ -79,7 +81,7 @@ for epoch in range(epochs):
 
         writer.add_scalar("Loss/label", label_loss, epoch)
         writer.add_scalar("Loss/bboxes", bbox_loss, epoch)
-        wrier.add_scalar("Loss/score", score_loss, epoch)      
+        writer.add_scalar("Loss/score", score_loss, epoch)      
         writer.add_scalar("Loss/all", loss, epoch)
         print(loss)       
         loss.backward()

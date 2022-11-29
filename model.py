@@ -16,7 +16,7 @@ num_boxes = 5
 score_threshold = 0.5
 
 class resNet(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, device):
         super(resNet, self).__init__()
 
         #model layers
@@ -33,12 +33,19 @@ class resNet(torch.nn.Module):
         #transforms are resizing and converting to tensor
         self.transforms = T.Compose([T.Resize((image_x,image_y)),T.ConvertImageDtype(torch.float)])
 
+        #device where tensors are loaded
+        self.device = device
+
         
     def forward(self, x):
 
         #get the scale reduction from image resize
-        scale_x = torch.tensor([[[img.shape[1]/image_x, 1, img.shape[1]/image_x, 1]]*num_boxes for img in x])
-        scale_y = torch.tensor([[[1, img.shape[2]/image_y, 1, img.shape[2]/image_y]]*num_boxes for img in x])
+        scale_x = torch.tensor([[[img.shape[1], 1, img.shape[1], 1]]*num_boxes for img in x])
+        scale_y = torch.tensor([[[1, img.shape[2], 1, img.shape[2]]]*num_boxes for img in x])
+
+        #send tensors to device
+        scale_x = scale_x.to(self.device)
+        scale_y = scale_y.to(self.device)
 
         #data input processing with transforms
         x = [self.transforms(img) for img in x]    
