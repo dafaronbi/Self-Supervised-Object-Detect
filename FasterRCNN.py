@@ -12,8 +12,17 @@ from tqdm import tqdm
 import torchvision
 from torchvision.models.detection import FasterRCNN
 from torchvision.models.detection.rpn import AnchorGenerator
+from torch import nn
+#import transforms as T
+from torchvision import datasets, models, transforms
 
-data_path = "C:/Users/varsh/Documents/Courses/DL/Project/data/labeled/"
+
+
+data_path = "/labeled/labeled/training/"
+
+
+def custom_collate_fn(batch):
+    return tuple(zip(*batch))
 
 class ObjectDetection(torch.utils.data.Dataset):
     def __init__(self, root,transforms=None):
@@ -61,11 +70,13 @@ https://github.com/sovit-123/fasterrcnn-pytorch-training-pipeline/blob/main/mode
 def create_model(res50_custom,num_classes=100):
     # Load the pretrained features.
 
-    backbone = res50_custom.features
+    backbone = nn.Sequential(
+        res50_custom.layer1, res50_custom.layer2, res50_custom.layer3, res50_custom.layer4 
+    )
 
     # We need the output channels of the last convolutional layers from
     # the features for the Faster RCNN model.
-    backbone.out_channels = 768
+    backbone.out_channels = 256
 
     # Generate anchors using the RPN. Here, we are using 5x3 anchors.
     # Meaning, anchors with 5 different sizes and 3 different aspect 
@@ -108,11 +119,10 @@ def create_model(res50_custom,num_classes=100):
 #         print(f"{total_trainable_params:,} training parameters.")
 
 
-transforms = transforms.Compose([
-        transforms.ToTensor(),
+transforms = transforms.Compose([transforms.PILToTensor(),transforms.ConvertImageDtype(torch.float),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
-objDet_Dataset = ObjectDetection(data_path)
+objDet_Dataset = ObjectDetection(data_path,transforms)
 print(objDet_Dataset[0])
 # split the dataset in train and test set
 indices = torch.randperm(len(objDet_Dataset)).tolist()
@@ -121,12 +131,13 @@ dataset_test = torch.utils.data.Subset(objDet_Dataset, indices[10:12])
 
 
 resnet50 = torch.load('best_model_2022-11-29.pt')
+print(resnet50)
 model = create_model(resnet50,get_num_classes())
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 # define training and validation data loaders
-data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=4)
+data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=4,collate_fn=custom_collate_fn)
 
 data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=4)
 
