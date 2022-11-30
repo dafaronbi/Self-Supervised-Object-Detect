@@ -38,7 +38,7 @@ def label2id_encode(label):
     #     return len(d1)+1
     return d1[label]+1
 
-def num_classes():
+def get_num_classes():
     d1,d2 = dicts_common()
     return len(d1)
 

@@ -9,7 +9,9 @@ from common_functions import *
 from torchvision import datasets, models, transforms
 from torch.nn import CrossEntropyLoss,MSELoss
 from tqdm import tqdm
-
+import torchvision
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.rpn import AnchorGenerator
 
 data_path = "C:/Users/varsh/Documents/Courses/DL/Project/data/labeled/"
 
@@ -53,6 +55,59 @@ class ObjectDetection(torch.utils.data.Dataset):
         return len(self.imgs)
 
 
+"""
+https://github.com/sovit-123/fasterrcnn-pytorch-training-pipeline/blob/main/models/fasterrcnn_convnext_small.py
+"""
+def create_model(res50_custom,num_classes=100):
+    # Load the pretrained features.
+
+    backbone = res50_custom.features
+
+    # We need the output channels of the last convolutional layers from
+    # the features for the Faster RCNN model.
+    backbone.out_channels = 768
+
+    # Generate anchors using the RPN. Here, we are using 5x3 anchors.
+    # Meaning, anchors with 5 different sizes and 3 different aspect 
+    # ratios.
+    anchor_generator = AnchorGenerator(
+        sizes=((32, 64, 128, 256, 512),),
+        aspect_ratios=((0.5, 1.0, 2.0),)
+    )
+
+    # Feature maps to perform RoI cropping.
+    # If backbone returns a Tensor, `featmap_names` is expected to
+    # be [0]. We can choose which feature maps to use.
+    roi_pooler = torchvision.ops.MultiScaleRoIAlign(
+        featmap_names=['0'],
+        output_size=7,
+        sampling_ratio=2
+    )
+
+    # Final Faster RCNN model.
+    model = FasterRCNN(
+        backbone=backbone,
+        num_classes=num_classes,
+        rpn_anchor_generator=anchor_generator,
+        box_roi_pool=roi_pooler
+    )
+
+    return model
+
+# if __name__ == '__main__':
+#     from model_summary import summary
+#     model = create_model(num_classes=81, pretrained=True, coco_model=True)
+#     try:
+#         summary(model)
+#     except:
+#         # Total parameters and trainable parameters.
+#         total_params = sum(p.numel() for p in model.parameters())
+#         print(f"{total_params:,} total parameters.")
+#         total_trainable_params = sum(
+#             p.numel() for p in model.parameters() if p.requires_grad)
+#         print(f"{total_trainable_params:,} training parameters.")
+
+
 transforms = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -65,9 +120,8 @@ dataset = torch.utils.data.Subset(objDet_Dataset, indices[:10])
 dataset_test = torch.utils.data.Subset(objDet_Dataset, indices[10:12])
 
 
-backbone_model = torch.load('best_model_2022-11-29.pt')
-model = torchvision.models.detection.fasterrcnn_resnet50_fpn_v2(num_classes=1001,weights_backbone=backbone_model.state_dict())
-
+resnet50 = torch.load('best_model_2022-11-29.pt')
+model = create_model(resnet50,get_num_classes())
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
