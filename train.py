@@ -1,10 +1,12 @@
 import data
 import model
+import model2
 import sys
 import yaml
 import torch
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
+import torchvision
 import argparse
 
 
@@ -24,6 +26,8 @@ epochs = int(training_params["epochs"])
 lr = float(training_params["lr"])
 save_path = training_params["save_path"]
 data_path = training_params["data_path"]
+batch_size = training_params["batch_size"]
+
 
 #function for batching dataloader
 def collate_fn(batch):
@@ -34,8 +38,8 @@ training_data = data.labeled_data(data_path, "training", data.get_transform(trai
 validation_data = data.labeled_data(data_path, "validation", data.get_transform(train=True))
 
 #get training and validation dataloaders
-training_loader = torch.utils.data.DataLoader(training_data, batch_size=8, shuffle=True, collate_fn=collate_fn)
-validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=8, shuffle=True, collate_fn=collate_fn)
+training_loader = torch.utils.data.DataLoader(training_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
 # label_criterion = torch.nn.CrossEntropyLoss()
 label_criterion = torch.nn.MSELoss()
@@ -46,7 +50,7 @@ score_criterion = torch.nn.MSELoss()
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 #load model
-network = model.resNet(device)
+network = model2.VGG(device=device)
 network = network.to(device)
 
 #initialize optimizer
@@ -75,7 +79,7 @@ for epoch in range(epochs):
         score_loss = 0
         loss =0
         for i,p_dict in enumerate(p_out):
-            for j in range(model.num_boxes):
+            for j in range(model2.num_boxes):
                 num_boxes = len(t_labels[i])
                 #calculate loss when ground truth bboxes are available
                 if j < num_boxes:
@@ -105,11 +109,27 @@ for epoch in range(epochs):
             print(f'[{epoch + 1}, {ind + 1:5d}] loss: {running_loss / 2000:.3f}')
             running_loss = 0.0
 
+#write image results to tensor board
+network.train(False)
+
+images, labels = next(iter(validation_loader))
+inputs = [img.to(device) for img in images]
+p_boxes = [dic["boxes"] for dic in network(inputs)]
+p_labels = [dic["labels"] for dic in network(inputs)]
+
+truth_images = [torchvision.utils.draw_bounding_boxes(image, labels[i]["bboxes"], labels=[list(data.class_dict.keys())[int(l)] for l in labels[i]["labels"]] ) for i,image in enumerate(images)]
+predict_images = [torchvision.utils.draw_bounding_boxes(image, p_boxes[i], labels=[list(data.class_dict.keys())[int(l)] for l in p_labels[i]] ) for i,image in enumerate(images)]
+
+#display predicted images on tesorboard
+for i in range(len(images)):
+    writer.add_image("truth image: "  +str(i), truth_images[i])
+    writer.add_image("predict image: "  +str(i), predict_images[i])
+
+#close tensorboard writer
 writer.flush()
 writer.close()
+
+#save model
 torch.save(network.state_dict(), save_path)
    
-
-# print(training_data[int(sys.argv[1])])
-# print(training_data[int(sys.argv[1])][0].shape)
 

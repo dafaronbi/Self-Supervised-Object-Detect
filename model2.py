@@ -4,7 +4,7 @@ from torchvision.transforms import functional as F, InterpolationMode, transform
 import torch.nn.functional as TF
 import torch.nn as nn
 
-load_path = "saved_model_2.pt"
+load_path = "saved_model.pt"
 
 #resize dimensions for model
 image_x = 224
@@ -20,7 +20,7 @@ score_threshold = 0.5
 device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 class VGG(torch.nn.Module):
-    def __init__(self, num_classes=100, in_channels=3, num_boxes=5, score_threshold=0.5,
+    def __init__(self, num_classes=100, in_channels=3, num_boxes=num_boxes, score_threshold=score_threshold,
     device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')):
         super(VGG, self).__init__()
         # resize image
