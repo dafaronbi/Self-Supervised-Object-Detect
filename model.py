@@ -31,7 +31,7 @@ class resNet(torch.nn.Module):
         self.scoreout = torch.nn.Linear(128, num_boxes)
 
         #transforms are resizing and converting to tensor
-        self.transforms = T.Compose([T.Resize((image_x,image_y)),T.ConvertImageDtype(torch.float)])
+        self.transforms = T.Compose([T.Resize((image_y,image_x)),T.ConvertImageDtype(torch.float)])
 
         #device where tensors are loaded
         self.device = device
