@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torchvision.transforms import functional as F, InterpolationMode, transforms as T
 import torch.nn.functional as TF
+import torch.nn as nn
 
 load_path = "saved_model.pt"
 
@@ -25,7 +26,7 @@ class resNet(torch.nn.Module):
         self.conv2 = torch.nn.Conv2d(in_channels=16, out_channels=1, kernel_size=5)
         self.ReLU2 = torch.nn.ReLU()
         self.flatten = torch.nn.Flatten()
-        self.linear1 = torch.nn.Linear(218*218, 128)
+        self.linear1 = torch.nn.Linear(1*218*218, 128)
         self.labelout = torch.nn.Linear(128, 100*num_boxes)
         self.bboxout = torch.nn.Linear(128, 4*num_boxes)
         self.scoreout = torch.nn.Linear(128, num_boxes)
