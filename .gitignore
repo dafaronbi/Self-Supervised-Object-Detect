@@ -5,3 +5,4 @@
 *.JPEG
 *.pyc 
 *.ipynb
+model_vgg.py
