@@ -4,7 +4,7 @@ from torchvision.transforms import functional as F, InterpolationMode, transform
 import torch.nn.functional as TF
 import torch.nn as nn
 
-load_path = "saved_model.pt"
+load_path = "saved_model_2.pt"
 
 #resize dimensions for model
 image_x = 224
