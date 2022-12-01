@@ -6,3 +6,5 @@
 *.pyc 
 *.ipynb
 model_vgg.py
+/labeled
+/unlabeled
