@@ -15,10 +15,12 @@ from torchvision.models.detection.rpn import AnchorGenerator
 from torch import nn
 #import transforms as T
 from torchvision import datasets, models, transforms
+from engine import *
+from utils import *
 
+train_data_path = "/content/data"
+val_data_path = "/content/data"
 
-
-data_path = "/labeled/labeled/training/"
 
 
 def custom_collate_fn(batch):
@@ -34,7 +36,6 @@ class ObjectDetection(torch.utils.data.Dataset):
         # ensure that they are aligned
         self.imgs = list(sorted(os.listdir(os.path.join(root, self.images_folder))))
         self.masks = list(sorted(os.listdir(os.path.join(root, self.labels_folder))))
-        
 
     def __getitem__(self, idx):
         # load images and masks
@@ -43,16 +44,18 @@ class ObjectDetection(torch.utils.data.Dataset):
         targets = None
         with open(target_path, 'r') as file:
             targets = yaml.safe_load(file)
-        img = Image.open(img_path).convert("RGB")
+        img = Image.open(img_path)
 
         #---- TARGETS------
         target_return = {}
         target_return['boxes'] = torch.as_tensor(targets['bboxes'],dtype=torch.float32)
         target_return['labels'] = torch.as_tensor([label2id_encode(cat) for cat in targets['labels']])
-        # target_return['area'] = torch.as_tensor([(box[2]-box[0])*(box[3]-box[1]) for box in targets['bboxes']],dtype=torch.float32)
-        # target_return['iscrowd'] = False
+        target_return['area'] = torch.as_tensor([(box[2]-box[0])*(box[3]-box[1]) for box in targets['bboxes']],dtype=torch.float32)
+        target_return['iscrowd']  = torch.zeros((len(targets['bboxes']),), dtype=torch.int64)
         # print(self.masks[idx])
-        # target_return['image_id'] = torch.tensor([int(self.masks[idx][:-4])])
+        # target_return['image_id'] = torch.as_tensor([int(self.masks[idx][:-4])],dtype=torch.int)
+        target_return['image_id'] = torch.tensor([idx])
+
 
         if self.transforms is not None:
             img = self.transforms(img)
@@ -70,13 +73,11 @@ https://github.com/sovit-123/fasterrcnn-pytorch-training-pipeline/blob/main/mode
 def create_model(res50_custom,num_classes=100):
     # Load the pretrained features.
 
-    backbone = nn.Sequential(
-        res50_custom.layer1, res50_custom.layer2, res50_custom.layer3, res50_custom.layer4 
-    )
+    backbone = torch.nn.Sequential(*(list(res50_custom.children())[:-1]))
 
     # We need the output channels of the last convolutional layers from
     # the features for the Faster RCNN model.
-    backbone.out_channels = 256
+    backbone.out_channels = 2048
 
     # Generate anchors using the RPN. Here, we are using 5x3 anchors.
     # Meaning, anchors with 5 different sizes and 3 different aspect 
@@ -105,41 +106,27 @@ def create_model(res50_custom,num_classes=100):
 
     return model
 
-# if __name__ == '__main__':
-#     from model_summary import summary
-#     model = create_model(num_classes=81, pretrained=True, coco_model=True)
-#     try:
-#         summary(model)
-#     except:
-#         # Total parameters and trainable parameters.
-#         total_params = sum(p.numel() for p in model.parameters())
-#         print(f"{total_params:,} total parameters.")
-#         total_trainable_params = sum(
-#             p.numel() for p in model.parameters() if p.requires_grad)
-#         print(f"{total_trainable_params:,} training parameters.")
 
 
-transforms = transforms.Compose([transforms.PILToTensor(),transforms.ConvertImageDtype(torch.float),
+transforms = transforms.Compose([transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
-objDet_Dataset = ObjectDetection(data_path,transforms)
-print(objDet_Dataset[0])
-# split the dataset in train and test set
-indices = torch.randperm(len(objDet_Dataset)).tolist()
-dataset = torch.utils.data.Subset(objDet_Dataset, indices[:10])
-dataset_test = torch.utils.data.Subset(objDet_Dataset, indices[10:12])
+
+dataset = ObjectDetection(train_data_path,transforms)
+dataset_test = ObjectDetection(val_data_path,transforms)
 
 
 resnet50 = torch.load('best_model_2022-11-29.pt')
-print(resnet50)
+# resnet50 = models.resnet50()
+# print(resnet50)
 model = create_model(resnet50,get_num_classes())
-
+# print(model)
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 # define training and validation data loaders
-data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=4,collate_fn=custom_collate_fn)
+data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=8,collate_fn=custom_collate_fn)
 
-data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=4)
+data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=1)
 
 # move model to the right device
 model.to(device)
@@ -154,33 +141,50 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                 gamma=0.1)
 
 # let's train it for 10 epochs
-num_epochs = 2
+num_epochs = 5
 classLossFunc = CrossEntropyLoss()
 bboxLossFunc = MSELoss()
 for epoch in tqdm(range(num_epochs)):
-    totalTrainLoss = 0.0
-    trainCorrect = 0.0
 
-    for (images, targets) in tqdm(data_loader):
-        (images, boxes,labels) = (images.to(device),targets['boxes'].to(device), targets['labels'].to(device))
-		# perform a forward pass and calculate the training loss
-        predictions = model(images)
-        bboxLoss = bboxLossFunc(predictions[0], boxes)
-        classLoss = classLossFunc(predictions[1], labels)
-        totalLoss = (bboxLoss) + (classLoss)
-		# zero out the gradients, perform the backpropagation step,
-		# and update the weights
-        optimizer.zero_grad()
-        totalLoss.backward()
-        optimizer.step()
-        lr_scheduler.step()
-		# add the loss to the total training loss so far and
-		# calculate the number of correct predictions
-        totalTrainLoss += totalLoss
-        trainCorrect += (predictions[1].argmax(1) == labels).type(torch.float).sum().item()
-
-    print(totalTrainLoss/len(dataset))
-    print(trainCorrect/len(dataset))
+    # train for one epoch, printing every 10 iterations
+    train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
+    # update the learning rate
+    lr_scheduler.step()
+    print('Done')
+    # evaluate on the test dataset
+    evaluate(model, data_loader_test, device=device)
 
 
 print("That's it!")
+
+
+
+
+
+
+# totalTrainLoss = 0.0
+    # trainCorrect = 0.0
+
+    # for (images, targets) in tqdm(data_loader):
+    #     images = list(image.to(device) for image in images)
+    #     print(images[0].shape)
+    #     targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+		#     # perform a forward pass and calculate the training loss
+    #     predictions = model(images,targets)
+    #     print(predictions)
+    #     bboxLoss = bboxLossFunc(predictions[0], targets['boxes'])
+    #     classLoss = classLossFunc(predictions[1], targets['labels'])
+    #     totalLoss = (bboxLoss) + (classLoss)
+		# # zero out the gradients, perform the backpropagation step,
+		# # and update the weights
+    #     optimizer.zero_grad()
+    #     totalLoss.backward()
+    #     optimizer.step()
+    #     lr_scheduler.step()
+		# # add the loss to the total training loss so far and
+		# # calculate the number of correct predictions
+    #     totalTrainLoss += totalLoss
+    #     trainCorrect += (predictions[1].argmax(1) == targets['labels']).type(torch.float).sum().item()
+
+    # print(totalTrainLoss/len(dataset))
+    # print(trainCorrect/len(dataset))
