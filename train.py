@@ -1,6 +1,5 @@
 import data
 import model
-import model2
 import sys
 import yaml
 import torch
@@ -50,7 +49,7 @@ score_criterion = torch.nn.MSELoss()
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 #load model
-network = model2.VGG(device=device)
+network = model.VGG(device=device)
 network = network.to(device)
 
 #initialize optimizer
@@ -79,7 +78,7 @@ for epoch in range(epochs):
         score_loss = 0
         loss =0
         for i,p_dict in enumerate(p_out):
-            for j in range(model2.num_boxes):
+            for j in range(model.num_boxes):
                 num_boxes = len(t_labels[i])
                 #calculate loss when ground truth bboxes are available
                 if j < num_boxes:

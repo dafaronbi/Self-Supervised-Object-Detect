@@ -16,28 +16,71 @@ num_boxes = 5
 #score threshold for inference
 score_threshold = 0.5
 
-class resNet(torch.nn.Module):
-    def __init__(self, device):
-        super(resNet, self).__init__()
+#device
+device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-        #model layers
-        self.conv1 = torch.nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3)
-        self.ReLU1 = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv2d(in_channels=16, out_channels=1, kernel_size=5)
-        self.ReLU2 = torch.nn.ReLU()
-        self.flatten = torch.nn.Flatten()
-        self.linear1 = torch.nn.Linear(1*218*218, 128)
-        self.labelout = torch.nn.Linear(128, 100*num_boxes)
-        self.bboxout = torch.nn.Linear(128, 4*num_boxes)
-        self.scoreout = torch.nn.Linear(128, num_boxes)
-
-        #transforms are resizing and converting to tensor
-        self.transforms = T.Compose([T.Resize((image_y,image_x)),T.ConvertImageDtype(torch.float)])
-
-        #device where tensors are loaded
+class VGG(torch.nn.Module):
+    def __init__(self, num_classes=100, in_channels=3, num_boxes=num_boxes, score_threshold=score_threshold,
+    device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')):
+        super(VGG, self).__init__()
+        # resize image
+        image_x = 224
+        image_y = 224
+        # device where tensors are loaded
         self.device = device
-
+        # number of classes
+        self.num_classes = num_classes
+        # number of in_channels
+        self.in_channels = in_channels
+        # number of bounding boxes
+        self.num_boxes = num_boxes
+        # score threshold
+        self.score_threshold = score_threshold
+        # transforms are resizing and converting to tensor
+        self.transforms = T.Compose([T.Resize((image_x,image_y)),T.ConvertImageDtype(torch.float)])
         
+        # conv layers
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(self.in_channels, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+
+        # flatten the layer
+        self.flatten = torch.nn.Flatten()
+
+        # fully connected linear layers
+        self.linear_layers = nn.Sequential(
+            nn.Linear(in_features=512*7*7, out_features=4096),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(in_features=4096, out_features=4096),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+        )
+        
+        self.labelout = nn.Linear(4096, 100*num_boxes)
+        self.bboxout = nn.Linear(4096, 4*num_boxes)
+        self.scoreout = nn.Linear(4096, num_boxes)
+   
     def forward(self, x):
 
         #get the scale reduction from image resize
@@ -53,10 +96,10 @@ class resNet(torch.nn.Module):
         x = torch.stack(x)
 
         #run data through model
-        out = TF.relu(self.conv1(x))
-        out = TF.relu(self.conv2(out))
+        out = self.conv_layers(x)
         out = self.flatten(out)
-        out = self.linear1(out)
+        out = self.linear_layers(out)
+
         labels = torch.reshape(self.labelout(out), (-1, num_boxes, 100))
         labels = torch.as_tensor(torch.argmax(labels, dim=2), dtype=torch.float32)
         bbox = torch.sigmoid(torch.reshape(self.bboxout(out), (-1,num_boxes,4)))
@@ -75,17 +118,14 @@ class resNet(torch.nn.Module):
             for l,b,s in zip(labels,bbox,score):
                 keep_dim = []
                 for i,score in enumerate(s):
-                    if score > score_threshold:
+                    if score > self.score_threshold:
                         keep_dim.append(i)
                 o.append({"labels": l[keep_dim], "boxes": b[keep_dim,:], "scores": s[keep_dim]})
-            return o
+            return o   
 
 #get model functon used for evalutatoin
 def get_model():
-    
     #load model
-    network = resNet()
+    network = VGG()
     network.load_state_dict(torch.load(load_path))
-
     return network
-
