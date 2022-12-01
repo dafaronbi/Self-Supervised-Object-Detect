@@ -1,4 +1,6 @@
 /labeled_data
+/__pycache__
 *.yml
 *.zip
 *.JPEG
+*.pyc 
