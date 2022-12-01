@@ -1,17 +1,29 @@
 import data
 import model
 import sys
+import yaml
 import torch
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
+import argparse
 
 
+parser = argparse.ArgumentParser(description='Load training parameters yml')
+parser.add_argument('-p', '--params', help="parameter yml file for training model")
+args = parser.parse_args()
+
+#load parameters for training model
+with open(args.params) as f:
+    training_params = yaml.safe_load(f)
+
+print("training_parameters:")
+print(training_params)
 
 #set training parameters
-epochs = 300
-lr = 0.001
-save_path = "saved_model.pt"
-data_path = "labeled_data"
+epochs = int(training_params["epochs"])
+lr = float(training_params["lr"])
+save_path = training_params["save_path"]
+data_path = training_params["data_path"]
 
 #function for batching dataloader
 def collate_fn(batch):
