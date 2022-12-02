@@ -142,7 +142,7 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                 gamma=0.1)
 
 # let's train it for 10 epochs
-num_epochs = 5
+num_epochs = 50
 classLossFunc = CrossEntropyLoss()
 bboxLossFunc = MSELoss()
 
