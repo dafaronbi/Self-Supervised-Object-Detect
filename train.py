@@ -84,7 +84,7 @@ for epoch in range(epochs):
                     bbox_loss_j = torchvision.ops.generalized_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
                     score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
                     label_loss += label_loss_j
-                    bbox_loss += bbox_loss_j
+                    bbox_loss -= bbox_loss_j
                     score_loss += score_loss_j
                     loss += sum([label_loss_j, bbox_loss_j, score_loss_j])
                 #only calculate loss on score when there is not ground truth bbox
@@ -116,6 +116,16 @@ images, labels = next(iter(validation_loader))
 inputs = [img.to(device) for img in images]
 p_boxes = [dic["boxes"] for dic in network(inputs)]
 p_labels = [dic["labels"] for dic in network(inputs)]
+
+#make sure x_min < x_max and y_min < y_max
+for i in range(len(p_boxes)):
+    for j in range(len(p_boxes[i])):
+        if p_boxes[i][j][0] > p_boxes[i][j][2]:
+            p_boxes[i][j][2] = p_boxes[i][j][0] +1
+        if p_boxes[i][j][1] > p_boxes[i][j][3]:
+            p_boxes[i][j][3] = p_boxes[i][j][1] +1
+
+
 
 truth_images = [torchvision.utils.draw_bounding_boxes(image, labels[i]["bboxes"], labels=[list(data.class_dict.keys())[int(l)] for l in labels[i]["labels"]] ) for i,image in enumerate(images)]
 predict_images = [torchvision.utils.draw_bounding_boxes(image, p_boxes[i], labels=[list(data.class_dict.keys())[int(l)] for l in p_labels[i]] ) for i,image in enumerate(images)]
