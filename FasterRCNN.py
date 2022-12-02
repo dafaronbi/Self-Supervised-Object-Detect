@@ -17,9 +17,10 @@ from torch import nn
 from torchvision import datasets, models, transforms
 from engine import *
 from utils import *
+import time
 
-train_data_path = "/content/data"
-val_data_path = "/content/data"
+train_data_path = "/labeled/labeled/training/"
+val_data_path = "/labeled/labeled/validation/"
 
 
 
@@ -44,7 +45,7 @@ class ObjectDetection(torch.utils.data.Dataset):
         targets = None
         with open(target_path, 'r') as file:
             targets = yaml.safe_load(file)
-        img = Image.open(img_path)
+        img = Image.open(img_path).convert("RGB")
 
         #---- TARGETS------
         target_return = {}
@@ -124,7 +125,7 @@ model = create_model(resnet50,get_num_classes())
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 # define training and validation data loaders
-data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=8,collate_fn=custom_collate_fn)
+data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=1,collate_fn=custom_collate_fn)
 
 data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=1)
 
@@ -144,17 +145,24 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
 num_epochs = 5
 classLossFunc = CrossEntropyLoss()
 bboxLossFunc = MSELoss()
+
+since = time.time()
 for epoch in tqdm(range(num_epochs)):
 
     # train for one epoch, printing every 10 iterations
     train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq=10)
+    time_elapsed = time.time() - since
+    print(time_elapsed)
     # update the learning rate
     lr_scheduler.step()
     print('Done')
     # evaluate on the test dataset
     evaluate(model, data_loader_test, device=device)
+    time_elapsed = time.time() - since
+    print(time_elapsed)
+    torch.save(model,f"bestObjDet_{epoch}.pt")
 
-
+torch.save(model,f'bestObjDet.pt')
 print("That's it!")
 
 

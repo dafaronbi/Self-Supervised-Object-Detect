@@ -96,7 +96,7 @@ def evaluate(model, data_loader, device):
 
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         model_time = time.time() - model_time
-        print(targets)
+        #print(targets)
         # for target, output in zip(targets, outputs):
         #   print(target)
         #   print(output)
