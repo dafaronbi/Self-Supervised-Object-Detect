@@ -69,7 +69,7 @@ class VGG(torch.nn.Module):
 
         # fully connected linear layers
         self.linear_layers = nn.Sequential(
-            nn.Linear(in_features=(512*7*7 + 1000), out_features=4096),
+            nn.Linear(in_features=(512*7*7), out_features=4096),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(in_features=4096, out_features=4096),
@@ -97,17 +97,17 @@ class VGG(torch.nn.Module):
         x = torch.stack(x)
 
         #load pretext RCNN model (self supervised)
-        pretext = torch.load('best_model_2022-11-29.pt', map_location=self.device)
-        pretext = pretext.to(self.device)
-        pretext.eval()
+        # pretext = torch.load('best_model_2022-11-29.pt', map_location=self.device)
+        # pretext = pretext.to(self.device)
+        # pretext.eval()
 
         #run data through pretrained model
-        p_out = pretext(x)
+        # p_out = pretext(x)
 
         #run data through model
         out = self.conv_layers(x)
         out = self.flatten(out)
-        out = self.linear_layers(torch.cat((out,p_out), 1))
+        out = self.linear_layers(out)
 
         labels = torch.reshape(self.labelout(out), (-1, num_boxes, 100))
         labels_t = self.labelsoftmax(labels)
