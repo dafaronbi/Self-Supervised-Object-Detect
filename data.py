@@ -83,8 +83,8 @@ class labeled_data(torch.utils.data.Dataset):
         bbox[2] / labels['image_size'][0], bbox[3] / labels['image_size'][1]] for bbox in labels['bboxes']], dtype=torch.float32)
         target['bboxes'] = torch.as_tensor(labels['bboxes'], dtype=torch.float32)
         target['image_size'] = torch.as_tensor(labels['image_size'], dtype=torch.float32)
-        # target['labels'] = torch.as_tensor(torch.nn.functional.one_hot(torch.as_tensor([ class_dict[label] for label in labels['labels']], dtype=torch.int64), num_classes=100), dtype=torch.float32)
-        target["labels"] = torch.as_tensor([ class_dict[label] for label in labels['labels']], dtype=torch.float32)
+        target['labels'] = torch.as_tensor(torch.nn.functional.one_hot(torch.as_tensor([ class_dict[label] for label in labels['labels']], dtype=torch.int64), num_classes=100), dtype=torch.float32)
+        target["labels_i"] = torch.as_tensor([ class_dict[label] for label in labels['labels']], dtype=torch.float32)
         target["image_id"] = torch.as_tensor([idx])
         target["area"] = (target['bboxes'][:, 3] - target['bboxes'][:, 1]) * (target['bboxes'][:, 2] - target['bboxes'][:, 0])
         target["iscrowd"] = iscrowd

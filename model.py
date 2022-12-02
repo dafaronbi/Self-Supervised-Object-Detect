@@ -69,7 +69,7 @@ class VGG(torch.nn.Module):
 
         # fully connected linear layers
         self.linear_layers = nn.Sequential(
-            nn.Linear(in_features=512*7*7, out_features=4096),
+            nn.Linear(in_features=(512*7*7 + 1000), out_features=4096),
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(in_features=4096, out_features=4096),
@@ -78,6 +78,7 @@ class VGG(torch.nn.Module):
         )
         
         self.labelout = nn.Linear(4096, 100*num_boxes)
+        self.labelsoftmax = nn.Softmax(dim=1)
         self.bboxout = nn.Linear(4096, 4*num_boxes)
         self.scoreout = nn.Linear(4096, num_boxes)
    
@@ -95,13 +96,21 @@ class VGG(torch.nn.Module):
         x = [self.transforms(img) for img in x]    
         x = torch.stack(x)
 
+        #load pretext RCNN model (self supervised)
+        pretext = torch.load('best_model_2022-11-29.pt', map_location=self.device)
+        pretext = pretext.to(self.device)
+
+        #run data through pretrained model
+        p_out = pretext(x)
+
         #run data through model
         out = self.conv_layers(x)
         out = self.flatten(out)
-        out = self.linear_layers(out)
-
+        out = self.linear_layers(torch.cat((out,p_out), 1))
+        
         labels = torch.reshape(self.labelout(out), (-1, num_boxes, 100))
-        labels = torch.as_tensor(torch.argmax(labels, dim=2), dtype=torch.float32)
+        labels_t = self.labelsoftmax(labels)
+        labels_i = torch.as_tensor(torch.argmax(labels_t, dim=2), dtype=torch.float32)
         bbox = torch.sigmoid(torch.reshape(self.bboxout(out), (-1,num_boxes,4)))
         score = torch.sigmoid(self.scoreout(out))
 
@@ -111,11 +120,11 @@ class VGG(torch.nn.Module):
         if self.training:
             return [ {"labels": l, 
             "boxes": b,  
-            "scores": s} for l,b,s in zip(labels,bbox,score)] 
+            "scores": s} for l,b,s in zip(labels_t,bbox,score)] 
             
         else:
             o = []
-            for l,b,s in zip(labels,bbox,score):
+            for l,b,s in zip(labels_i,bbox,score):
                 keep_dim = []
                 for i,score in enumerate(s):
                     if score > self.score_threshold:

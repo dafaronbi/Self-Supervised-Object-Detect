@@ -41,7 +41,7 @@ training_loader = torch.utils.data.DataLoader(training_data, batch_size=batch_si
 validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
 # label_criterion = torch.nn.CrossEntropyLoss()
-label_criterion = torch.nn.MSELoss()
+label_criterion = torch.nn.CrossEntropyLoss()
 bbox_criterion = torch.nn.MSELoss()
 score_criterion = torch.nn.MSELoss()
 
@@ -84,7 +84,7 @@ for epoch in range(epochs):
                     bbox_loss_j = torchvision.ops.generalized_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
                     score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
                     label_loss += label_loss_j
-                    bbox_loss -= bbox_loss_j
+                    bbox_loss += bbox_loss_j
                     score_loss += score_loss_j
                     loss += sum([label_loss_j, bbox_loss_j, score_loss_j])
                 #only calculate loss on score when there is not ground truth bbox
@@ -127,7 +127,7 @@ for i in range(len(p_boxes)):
 
 
 
-truth_images = [torchvision.utils.draw_bounding_boxes(image, labels[i]["bboxes"], labels=[list(data.class_dict.keys())[int(l)] for l in labels[i]["labels"]] ) for i,image in enumerate(images)]
+truth_images = [torchvision.utils.draw_bounding_boxes(image, labels[i]["bboxes"], labels=[list(data.class_dict.keys())[int(l)] for l in labels[i]["labels_i"]] ) for i,image in enumerate(images)]
 predict_images = [torchvision.utils.draw_bounding_boxes(image, p_boxes[i], labels=[list(data.class_dict.keys())[int(l)] for l in p_labels[i]] ) for i,image in enumerate(images)]
 
 #display predicted images on tesorboard
