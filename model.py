@@ -99,6 +99,7 @@ class VGG(torch.nn.Module):
         #load pretext RCNN model (self supervised)
         pretext = torch.load('best_model_2022-11-29.pt', map_location=self.device)
         pretext = pretext.to(self.device)
+        pretext.eval()
 
         #run data through pretrained model
         p_out = pretext(x)
@@ -107,7 +108,7 @@ class VGG(torch.nn.Module):
         out = self.conv_layers(x)
         out = self.flatten(out)
         out = self.linear_layers(torch.cat((out,p_out), 1))
-        
+
         labels = torch.reshape(self.labelout(out), (-1, num_boxes, 100))
         labels_t = self.labelsoftmax(labels)
         labels_i = torch.as_tensor(torch.argmax(labels_t, dim=2), dtype=torch.float32)
