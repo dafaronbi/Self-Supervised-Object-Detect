@@ -59,6 +59,8 @@ optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
 writer = SummaryWriter()
 
 for epoch in range(epochs):
+    # Make sure gradient tracking is on
+    network.train(True)
     running_loss = 0.0
     label_loss = 0 
     bbox_loss = 0
@@ -109,9 +111,10 @@ for epoch in range(epochs):
     writer.add_scalar("Loss/score", score_loss, epoch)      
     writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch)    
 
-#write image results to tensor board
+# Make sure gradient tracking is off
 network.train(False)
 
+#write image results to tensor board
 images, labels = next(iter(validation_loader))
 inputs = [img.to(device) for img in images]
 p_boxes = [dic["boxes"] for dic in network(inputs)]
