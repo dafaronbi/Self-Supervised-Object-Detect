@@ -79,7 +79,8 @@ class VGG(torch.nn.Module):
         
         self.labelout = nn.Linear(4096, 100*num_boxes)
         self.labelsoftmax = nn.Softmax(dim=1)
-        self.bboxout = nn.Linear(4096, 4*num_boxes)
+        self.bboxoutstart = nn.Linear(4096, 2*num_boxes)
+        self.bboxoutsize = nn.Linear(4096, 2*num_boxes)
         self.scoreout = nn.Linear(4096, num_boxes)
    
     def forward(self, x):
@@ -112,7 +113,14 @@ class VGG(torch.nn.Module):
         labels = torch.reshape(self.labelout(out), (-1, num_boxes, 100))
         labels_t = self.labelsoftmax(labels)
         labels_i = torch.as_tensor(torch.argmax(labels_t, dim=2), dtype=torch.float32)
-        bbox = torch.sigmoid(torch.reshape(self.bboxout(out), (-1,num_boxes,4)))
+
+        #bounding box output is xywh -> normalized x1y1x2y2
+        bbox_start = torch.sigmoid(torch.reshape(self.bboxoutstart(out), (-1,num_boxes,2)))
+        bbox_size = torch.sigmoid(torch.reshape(self.bboxoutsize(out), (-1,num_boxes,2)))
+        bbox_end = torch.add(bbox_start,bbox_size)
+        bbox = torch.cat((bbox_start, bbox_end), dim=-1)
+
+        # bbox[...,[2,3]] += bbox[..., [0,1]]
         score = torch.sigmoid(self.scoreout(out))
 
         #scale bbox
@@ -137,5 +145,5 @@ class VGG(torch.nn.Module):
 def get_model():
     #load model
     network = VGG()
-    network.load_state_dict(torch.load(load_path))
+    network.load_state_dict(torch.load(load_path, map_location=device))
     return network
