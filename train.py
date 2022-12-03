@@ -80,9 +80,9 @@ for epoch in range(epochs):
                 num_boxes = len(t_labels[i])
                 #calculate loss when ground truth bboxes are available
                 if j < num_boxes:
-                    label_loss_j = label_criterion(p_dict["labels"][j],t_labels[i][j])
-                    bbox_loss_j = torchvision.ops.generalized_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
-                    score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
+                    label_loss_j = 0.2*label_criterion(p_dict["labels"][j],t_labels[i][j])
+                    bbox_loss_j = 0.6*torchvision.ops.distance_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
+                    score_loss_j = 0.2*score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
                     label_loss += label_loss_j
                     bbox_loss += bbox_loss_j
                     score_loss += score_loss_j
@@ -99,8 +99,8 @@ for epoch in range(epochs):
         
         # print statistics
         running_loss += loss.item()
-        if ind % 100 == 99:    # print every 2000 mini-batches
-            print(f'[{epoch + 1}, {ind + 1:5d}] loss: {running_loss / 2000:.3f}')
+        if ind % 100 == 99:    # print every 100 mini-batches
+            print(f'[{epoch + 1}, {ind + 1:5d}] loss: {running_loss / 100:.3f}')
             running_loss = 0.0
     
     #document loss of epoch
