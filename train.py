@@ -38,7 +38,7 @@ validation_data = data.labeled_data(data_path, "validation", data.get_transform(
 
 #get training and validation dataloaders
 training_loader = torch.utils.data.DataLoader(training_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
 # label_criterion = torch.nn.CrossEntropyLoss()
 label_criterion = torch.nn.CrossEntropyLoss()
