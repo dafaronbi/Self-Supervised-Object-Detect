@@ -133,11 +133,11 @@ class VGG(torch.nn.Module):
         if self.training:
             return [ {"labels": l, 
             "boxes": b,  
-            "scores": s} for l,b,s in zip(labels_t,bbox,score)] 
+            "scores": s} for l,b,s in zip(labels_t,bbox,score)]  #labels_t
             
         else:
             o = []
-            for l,b,s in zip(labels_i,bbox,score):
+            for l,b,s in zip(labels_i,bbox,score): #labels_i
                 keep_dim = []
                 for i,score in enumerate(s):
                     if score > self.score_threshold:
