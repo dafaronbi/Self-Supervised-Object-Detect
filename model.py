@@ -3,6 +3,10 @@ import numpy as np
 from torchvision.transforms import functional as F, InterpolationMode, transforms as T
 import torch.nn.functional as TF
 import torch.nn as nn
+import torchvision
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 load_path = "saved_model.pt"
 
