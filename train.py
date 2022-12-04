@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import argparse
-
+from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser(description='Load training parameters yml')
 parser.add_argument('-p', '--params', help="parameter yml file for training model")
@@ -34,11 +34,11 @@ def collate_fn(batch):
 
 #get training and validation datasets
 training_data = data.labeled_data(data_path, "training", data.get_transform(train=True))
-validation_data = data.labeled_data(data_path, "validation", data.get_transform(train=True))
+validation_data = data.labeled_data(data_path, "validation", data.get_transform(train=False))
 
 #get training and validation dataloaders
-training_loader = torch.utils.data.DataLoader(training_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+training_loader = DataLoader(training_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+validation_loader = DataLoader(validation_data, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
 # label_criterion = torch.nn.CrossEntropyLoss()
 label_criterion = torch.nn.CrossEntropyLoss()
@@ -94,8 +94,6 @@ for epoch in range(epochs):
                     score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(0.0).to(device))
                     score_loss += score_loss_j
                     loss +=  score_loss_j
-
-
         loss.backward()
         optimizer.step()
         
@@ -110,6 +108,7 @@ for epoch in range(epochs):
     writer.add_scalar("Loss/bboxes", bbox_loss, epoch)
     writer.add_scalar("Loss/score", score_loss, epoch)      
     writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch)    
+
 
 # Make sure gradient tracking is off
 network.train(False)
