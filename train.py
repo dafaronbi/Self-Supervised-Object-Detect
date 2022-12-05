@@ -20,16 +20,16 @@ from torch.utils.data import DataLoader
 #print("training_parameters:")
 #print(training_params)
 
-param_path = "training_parameters/hpc_train.yml"
-training_params = yaml.safe_load(param_path)
+# param_path = "training_parameters/hpc_train.yml"
+# training_params = yaml.safe_load(param_path)
 
 #set training parameters
-epochs = int(training_params["epochs"])
-lr = float(training_params["lr"])
-mom = float(training_params["momentum"])
-save_path = training_params["save_path"]
-data_path = training_params["data_path"]
-batch_size = training_params["batch_size"]
+epochs = 5   #int(training_params["epochs"])
+lr = 0.001   #float(training_params["lr"])
+mom = 0.9    #float(training_params["momentum"])
+save_path = "vgg.pt"           #training_params["save_path"]
+data_path = "/labeled/labeled" #training_params["data_path"]
+batch_size = 16                #training_params["batch_size"]
 
 
 #function for batching dataloader
