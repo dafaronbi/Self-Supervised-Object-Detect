@@ -3,10 +3,10 @@
 #SBATCH --account=csci_ga_2572_2022fa_24
 #SBATCH --partition=n1s8-v100-1
 #SBATCH --gres=gpu:1
-#SBATCH --output=vgg.out
-#SBATCH --error=vgg.err
+#SBATCH --output=./%j_%x.out
+#SBATCH --error=./%j_%x.err
 #SBATCH --time=0:05:00
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH -c 4
 #SBATCH --requeue
 
