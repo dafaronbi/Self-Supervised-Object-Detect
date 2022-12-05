@@ -18,4 +18,4 @@ singularity exec --nv --overlay /scratch/DL22FA/overlay_11-16.ext3:ro \
 source /ext3/env.sh
 conda activate project
 python train.py
-”
+"
