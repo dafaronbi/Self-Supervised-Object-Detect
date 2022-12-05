@@ -11,7 +11,7 @@
 #SBATCH -c 4
 #SBATCH --requeue
 
-singularity exec --nv --overlay /scratch/DL22FA/overlay_11-16.ext3:ro \
+singularity exec --nv --overlay /scratch/DL22FA/overlay_12-02.ext3:ro \
 -B /scratch/DL22FA/unlabeled_112.sqsh:/unlabeled:image-src=/ \
 -B /scratch/DL22FA/labeled.sqsh:/labeled:image-src=/ \
 -B /scratch -B /scratch_tmp \
