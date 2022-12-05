@@ -102,6 +102,9 @@ for epoch in range(epochs):
         if ind % 100 == 99:    # print every 100 mini-batches
             print(f'[{epoch + 1}, {ind + 1:5d}] loss: {running_loss / 100:.3f}')
             running_loss = 0.0
+    #save model every 10 epochs
+    if epoch % 10 == 0:
+        torch.save(network.state_dict(), save_path)
     
     #document loss of epoch
     writer.add_scalar("Loss/label", label_loss, epoch)
