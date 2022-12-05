@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=vgg
 #SBATCH --account=csci_ga_2572_2022fa_24
-#SBATCH --partition=n1s16-v100-2
+#SBATCH --partition=n1s8-v100-1
 #SBATCH --gres=gpu:1
 #SBATCH --output=vgg.out
 #SBATCH --error=vgg.err
