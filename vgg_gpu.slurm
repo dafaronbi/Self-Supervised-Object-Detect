@@ -6,7 +6,7 @@
 #SBATCH --open-mode=append
 #SBATCH --output=./%j_%x.out
 #SBATCH --error=./%j_%x.err
-#SBATCH --time=2:00:00
+#SBATCH --time=8:00:00
 #SBATCH -c 4
 #SBATCH --requeue
 
