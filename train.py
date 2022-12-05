@@ -9,20 +9,24 @@ import torchvision
 import argparse
 from torch.utils.data import DataLoader
 
-parser = argparse.ArgumentParser(description='Load training parameters yml')
-parser.add_argument('-p', '--params', help="parameter yml file for training model")
-args = parser.parse_args()
+#parser = argparse.ArgumentParser(description='Load training parameters yml')
+#parser.add_argument('-p', '--params', help="parameter yml file for training model")
+#args = parser.parse_args()
 
 #load parameters for training model
-with open(args.params) as f:
-    training_params = yaml.safe_load(f)
+#with open(args.params) as f:
+#    training_params = yaml.safe_load(f)
 
-print("training_parameters:")
-print(training_params)
+#print("training_parameters:")
+#print(training_params)
+
+param_path = "training_parameters/hpc_train.yml"
+training_params = yaml.safe_load(param_path)
 
 #set training parameters
 epochs = int(training_params["epochs"])
 lr = float(training_params["lr"])
+mom = float(training_params["momentum"])
 save_path = training_params["save_path"]
 data_path = training_params["data_path"]
 batch_size = training_params["batch_size"]
@@ -53,7 +57,7 @@ network = model.VGG(device=device)
 network = network.to(device)
 
 #initialize optimizer
-optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
+optimizer = optim.SGD(network.parameters(), lr=lr, momentum=mom)
 
 #log for tensorboard
 writer = SummaryWriter()
