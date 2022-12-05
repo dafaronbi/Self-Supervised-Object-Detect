@@ -24,12 +24,12 @@ from torch.utils.data import DataLoader
 # training_params = yaml.safe_load(param_path)
 
 #set training parameters
-epochs = 5   #int(training_params["epochs"])
+epochs = 1   #int(training_params["epochs"])
 lr = 0.001   #float(training_params["lr"])
 mom = 0.9    #float(training_params["momentum"])
 save_path = "vgg.pt"           #training_params["save_path"]
 data_path = "/labeled/labeled" #training_params["data_path"]
-batch_size = 16                #training_params["batch_size"]
+batch_size = 8                #training_params["batch_size"]
 
 
 #function for batching dataloader
