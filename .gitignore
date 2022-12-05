@@ -12,3 +12,4 @@ model2.py
 *.out
 *.err
 /runs
+*.pt
