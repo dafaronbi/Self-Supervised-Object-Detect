@@ -7,7 +7,6 @@
 #SBATCH --output=./%j_%x.out
 #SBATCH --error=./%j_%x.err
 #SBATCH --time=0:05:00
-#SBATCH --mem=32G
 #SBATCH -c 4
 #SBATCH --requeue
 
