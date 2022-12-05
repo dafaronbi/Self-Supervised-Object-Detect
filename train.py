@@ -114,6 +114,10 @@ for epoch in range(epochs):
     writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch)    
 
 
+#save model
+torch.save(network.state_dict(), save_path)
+
+
 # Make sure gradient tracking is off
 network.train(False)
 
@@ -145,7 +149,6 @@ for i in range(len(images)):
 writer.flush()
 writer.close()
 
-#save model
-torch.save(network.state_dict(), save_path)
+
    
 

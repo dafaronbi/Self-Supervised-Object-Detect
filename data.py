@@ -47,7 +47,7 @@ class_dict = {
 
 def get_transform(train):
     transforms = []
-    transforms.append(T.ToTensor()) # T.PILToTensor() # T.ToTensor()
+    transforms.append(T.PILToTensor())  # T.ToTensor()
     # transforms.append(T.Resize((224,224)))
     # transforms.append(T.ConvertImageDtype(torch.float))
     # if train:
