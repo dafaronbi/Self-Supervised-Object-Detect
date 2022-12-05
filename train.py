@@ -53,7 +53,7 @@ network = model.VGG(device=device)
 network = network.to(device)
 
 #initialize optimizer
-optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
+optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.1)
 
 #log for tensorboard
 writer = SummaryWriter()
