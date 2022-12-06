@@ -20,16 +20,16 @@ from torch.utils.data import DataLoader
 #print("training_parameters:")
 #print(training_params)
 
-param_path = "training_parameters/hpc_train.yml"
-training_params = yaml.safe_load(param_path)
+# param_path = "training_parameters/hpc_train.yml"
+# training_params = yaml.safe_load(param_path)
 
 #set training parameters
-epochs = int(training_params["epochs"])
-lr = float(training_params["lr"])
-mom = float(training_params["momentum"])
-save_path = training_params["save_path"]
-data_path = training_params["data_path"]
-batch_size = training_params["batch_size"]
+epochs = 100   #int(training_params["epochs"])
+lr = 0.001   #float(training_params["lr"])
+mom = 0.9    #float(training_params["momentum"])
+save_path = "vgg2.pt"           #training_params["save_path"]
+data_path = "/labeled/labeled" #training_params["data_path"]
+batch_size = 16                #training_params["batch_size"]
 
 
 #function for batching dataloader
@@ -66,9 +66,9 @@ for epoch in range(epochs):
     # Make sure gradient tracking is on
     network.train(True)
     running_loss = 0.0
-    label_loss = 0 
-    bbox_loss = 0
-    score_loss = 0
+    label_loss = 0.0 
+    bbox_loss = 0.0
+    score_loss = 0.0
     
     for ind, (inputs,labels) in enumerate(training_loader, 0):
         
@@ -106,12 +106,19 @@ for epoch in range(epochs):
         if ind % 100 == 99:    # print every 100 mini-batches
             print(f'[{epoch + 1}, {ind + 1:5d}] loss: {running_loss / 100:.3f}')
             running_loss = 0.0
+
+    #save model every 5 epochs
+    if epoch % 5 == 0:
+        torch.save(network.state_dict(), save_path)
     
     #document loss of epoch
     writer.add_scalar("Loss/label", label_loss, epoch)
     writer.add_scalar("Loss/bboxes", bbox_loss, epoch)
-    writer.add_scalar("Loss/score", score_loss, epoch)      
-    writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch)    
+    writer.add_scalar("Loss/score", score_loss, epoch)
+    writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch) 
+
+#save final model
+torch.save(network.state_dict(), save_path)
 
 
 # Make sure gradient tracking is off
@@ -131,8 +138,6 @@ for i in range(len(p_boxes)):
         if p_boxes[i][j][1] > p_boxes[i][j][3]:
             p_boxes[i][j][3] = p_boxes[i][j][1] +1
 
-
-
 truth_images = [torchvision.utils.draw_bounding_boxes(image, labels[i]["bboxes"], labels=[list(data.class_dict.keys())[int(l)] for l in labels[i]["labels_i"]] ) for i,image in enumerate(images)]
 predict_images = [torchvision.utils.draw_bounding_boxes(image, p_boxes[i], labels=[list(data.class_dict.keys())[int(l)] for l in p_labels[i]] ) for i,image in enumerate(images)]
 
@@ -145,7 +150,6 @@ for i in range(len(images)):
 writer.flush()
 writer.close()
 
-#save model
-torch.save(network.state_dict(), save_path)
+
    
 
