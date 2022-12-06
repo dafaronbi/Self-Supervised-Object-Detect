@@ -106,6 +106,10 @@ for epoch in range(epochs):
         if ind % 100 == 99:    # print every 100 mini-batches
             print(f'[{epoch + 1}, {ind + 1:5d}] loss: {running_loss / 100:.3f}')
             running_loss = 0.0
+
+    #save model every 5 epochs
+    if epoch % 5 == 0:
+        torch.save(network.state_dict(), save_path)
     
     #document loss of epoch
     writer.add_scalar("Loss/label", label_loss, epoch)
@@ -113,8 +117,7 @@ for epoch in range(epochs):
     writer.add_scalar("Loss/score", score_loss, epoch)      
     writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch)    
 
-
-#save model
+#save final model
 torch.save(network.state_dict(), save_path)
 
 
@@ -134,8 +137,6 @@ for i in range(len(p_boxes)):
             p_boxes[i][j][2] = p_boxes[i][j][0] +1
         if p_boxes[i][j][1] > p_boxes[i][j][3]:
             p_boxes[i][j][3] = p_boxes[i][j][1] +1
-
-
 
 truth_images = [torchvision.utils.draw_bounding_boxes(image, labels[i]["bboxes"], labels=[list(data.class_dict.keys())[int(l)] for l in labels[i]["labels_i"]] ) for i,image in enumerate(images)]
 predict_images = [torchvision.utils.draw_bounding_boxes(image, p_boxes[i], labels=[list(data.class_dict.keys())[int(l)] for l in p_labels[i]] ) for i,image in enumerate(images)]
