@@ -24,12 +24,12 @@ from torch.utils.data import DataLoader
 # training_params = yaml.safe_load(param_path)
 
 #set training parameters
-epochs = 1   #int(training_params["epochs"])
+epochs = 100   #int(training_params["epochs"])
 lr = 0.001   #float(training_params["lr"])
 mom = 0.9    #float(training_params["momentum"])
-save_path = "vgg.pt"           #training_params["save_path"]
+save_path = "vgg2.pt"           #training_params["save_path"]
 data_path = "/labeled/labeled" #training_params["data_path"]
-batch_size = 8                #training_params["batch_size"]
+batch_size = 16                #training_params["batch_size"]
 
 
 #function for batching dataloader
@@ -66,9 +66,9 @@ for epoch in range(epochs):
     # Make sure gradient tracking is on
     network.train(True)
     running_loss = 0.0
-    label_loss = 0 
-    bbox_loss = 0
-    score_loss = 0
+    label_loss = 0.0 
+    bbox_loss = 0.0
+    score_loss = 0.0
     
     for ind, (inputs,labels) in enumerate(training_loader, 0):
         
@@ -114,8 +114,8 @@ for epoch in range(epochs):
     #document loss of epoch
     writer.add_scalar("Loss/label", label_loss, epoch)
     writer.add_scalar("Loss/bboxes", bbox_loss, epoch)
-    writer.add_scalar("Loss/score", score_loss, epoch)      
-    writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch)    
+    writer.add_scalar("Loss/score", score_loss, epoch)
+    writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch) 
 
 #save final model
 torch.save(network.state_dict(), save_path)
