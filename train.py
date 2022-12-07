@@ -7,6 +7,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import argparse
+import os
 
 
 parser = argparse.ArgumentParser(description='Load training parameters yml')
@@ -58,7 +59,20 @@ optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
 #log for tensorboard
 writer = SummaryWriter()
 
-for epoch in range(epochs):
+#set start epoch
+start_epoch = 0
+
+#load checkpoint if fle exists
+if os.path.exists(save_path):
+
+    checkpoint = torch.load(save_path)
+
+    network.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    start_epoch = checkpoint['epoch']
+
+
+for epoch in range(start_epoch, epochs):
     running_loss = 0.0
     label_loss = 0 
     bbox_loss = 0
@@ -102,9 +116,13 @@ for epoch in range(epochs):
         if ind % 100 == 99:    # print every 100 mini-batches
             print(f'[{epoch + 1}, {ind + 1:5d}] loss: {running_loss / 100:.3f}')
             running_loss = 0.0
+
     #save model every 10 epochs
     if epoch % 10 == 0:
-        torch.save(network.state_dict(), save_path)
+        torch.save({'epoch': epoch,
+            'model_state_dict': network.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss}, save_path)
     
     #document loss of epoch
     writer.add_scalar("Loss/label", label_loss, epoch)
@@ -143,6 +161,8 @@ writer.flush()
 writer.close()
 
 #save model
-torch.save(network.state_dict(), save_path)
+torch.save({'epoch': epochs,
+            'model_state_dict': network.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': 0}, save_path)
    
-
