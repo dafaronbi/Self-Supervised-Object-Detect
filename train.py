@@ -57,7 +57,7 @@ network = network.to(device)
 optimizer = optim.SGD(network.parameters(), lr=lr, momentum=0.9)
 
 #log for tensorboard
-writer = SummaryWriter()
+writer = SummaryWriter(save_path[:-3] + "_runs")
 
 #set start epoch
 start_epoch = 0
@@ -65,7 +65,7 @@ start_epoch = 0
 #load checkpoint if fle exists
 if os.path.exists(save_path):
 
-    checkpoint = torch.load(save_path)
+    checkpoint = torch.load(save_path, map_location=device)
 
     network.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -94,9 +94,9 @@ for epoch in range(start_epoch, epochs):
                 num_boxes = len(t_labels[i])
                 #calculate loss when ground truth bboxes are available
                 if j < num_boxes:
-                    label_loss_j = 0.2*label_criterion(p_dict["labels"][j],t_labels[i][j])
-                    bbox_loss_j = 0.6*torchvision.ops.distance_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
-                    score_loss_j = 0.2*score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
+                    label_loss_j = label_criterion(p_dict["labels"][j],t_labels[i][j])
+                    bbox_loss_j = torchvision.ops.distance_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
+                    score_loss_j = score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
                     label_loss += label_loss_j
                     bbox_loss += bbox_loss_j
                     score_loss += score_loss_j
