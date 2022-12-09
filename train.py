@@ -100,9 +100,9 @@ for epoch in range(start_epoch, epochs):
                 num_boxes = len(t_labels[i])
                 #calculate loss when ground truth bboxes are available
                 if j < num_boxes:
-                    label_loss_j = 0.2*label_criterion(p_dict["labels"][j],t_labels[i][j])
-                    bbox_loss_j = 0.6*torchvision.ops.distance_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
-                    score_loss_j = 0.2*score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
+                    label_loss_j = 1.0*label_criterion(p_dict["labels"][j],t_labels[i][j])
+                    bbox_loss_j = 1.0*torchvision.ops.distance_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
+                    score_loss_j = 1.0*score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
                     label_loss += label_loss_j
                     bbox_loss += bbox_loss_j
                     score_loss += score_loss_j
