@@ -1,6 +1,7 @@
 import data
 import model
 import sys
+import os
 import yaml
 import torch
 import torch.optim as optim
@@ -24,12 +25,13 @@ from torch.utils.data import DataLoader
 # training_params = yaml.safe_load(param_path)
 
 #set training parameters
-epochs = 100   #int(training_params["epochs"])
-lr = 0.001   #float(training_params["lr"])
-mom = 0.9    #float(training_params["momentum"])
-save_path = "vgg2.pt"           #training_params["save_path"]
-data_path = "/labeled/labeled" #training_params["data_path"]
-batch_size = 16                #training_params["batch_size"]
+epochs = 100                    #int(training_params["epochs"])
+lr = 0.001                      #float(training_params["lr"])
+mom = 0.9                       #float(training_params["momentum"])
+wd = 0.0001                     #weight decay
+save_path = "vgg3.pt"           #training_params["save_path"]
+data_path = "/labeled/labeled"  #training_params["data_path"]
+batch_size = 16                 #training_params["batch_size"]
 
 
 #function for batching dataloader
@@ -57,12 +59,24 @@ network = model.VGG(device=device)
 network = network.to(device)
 
 #initialize optimizer
-optimizer = optim.SGD(network.parameters(), lr=lr, momentum=mom)
+optimizer = optim.SGD(network.parameters(), lr=lr, momentum=mom, weight_decay=wd)
 
 #log for tensorboard
 writer = SummaryWriter()
 
-for epoch in range(epochs):
+#set start epoch
+start_epoch = 0
+
+#load checkpoint if fle exists
+if os.path.exists(save_path):
+
+    checkpoint = torch.load(save_path)
+
+    network.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    start_epoch = checkpoint['epoch']
+
+for epoch in range(start_epoch, epochs):
     # Make sure gradient tracking is on
     network.train(True)
     running_loss = 0.0
@@ -86,9 +100,9 @@ for epoch in range(epochs):
                 num_boxes = len(t_labels[i])
                 #calculate loss when ground truth bboxes are available
                 if j < num_boxes:
-                    label_loss_j = 0.2*label_criterion(p_dict["labels"][j],t_labels[i][j])
-                    bbox_loss_j = 0.6*torchvision.ops.distance_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
-                    score_loss_j = 0.2*score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
+                    label_loss_j = 1.0*label_criterion(p_dict["labels"][j],t_labels[i][j])
+                    bbox_loss_j = 1.0*torchvision.ops.distance_box_iou_loss(p_dict["boxes"][j],t_bboxes[i][j])
+                    score_loss_j = 1.0*score_criterion(p_dict["scores"][j],torch.tensor(1.0).to(device))
                     label_loss += label_loss_j
                     bbox_loss += bbox_loss_j
                     score_loss += score_loss_j
@@ -109,7 +123,10 @@ for epoch in range(epochs):
 
     #save model every 5 epochs
     if epoch % 5 == 0:
-        torch.save(network.state_dict(), save_path)
+        torch.save({'epoch': epoch,
+            'model_state_dict': network.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': loss}, save_path)
     
     #document loss of epoch
     writer.add_scalar("Loss/label", label_loss, epoch)
@@ -118,7 +135,13 @@ for epoch in range(epochs):
     writer.add_scalar("Loss/all", label_loss+bbox_loss+score_loss, epoch) 
 
 #save final model
-torch.save(network.state_dict(), save_path)
+#torch.save(network.state_dict(), save_path)
+
+#save final model
+torch.save({'epoch': epochs,
+            'model_state_dict': network.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'loss': 0}, save_path)
 
 
 # Make sure gradient tracking is off
@@ -149,7 +172,3 @@ for i in range(len(images)):
 #close tensorboard writer
 writer.flush()
 writer.close()
-
-
-   
-

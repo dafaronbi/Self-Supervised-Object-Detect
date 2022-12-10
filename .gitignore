@@ -9,7 +9,8 @@ model_vgg.py
 /labeled
 /unlabeled
 model2.py
-*.out
-*.err
 /runs
 *.pt
+
+#*.out
+#*.err
