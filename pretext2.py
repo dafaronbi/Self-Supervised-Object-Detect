@@ -46,8 +46,8 @@ class CropDataset(Dataset):
         self.labels_folder = "labels"
         # load all image files, sorting them to
         # ensure that they are aligned
-        self.imgs = list(sorted(os.listdir(os.path.join(root, self.images_folder))))[:100]
-        self.masks = list(sorted(os.listdir(os.path.join(root, self.labels_folder))))[:100]
+        self.imgs = list(sorted(os.listdir(os.path.join(root, self.images_folder))))
+        self.masks = list(sorted(os.listdir(os.path.join(root, self.labels_folder))))
         
     def __len__(self):
         return len(self.imgs)
@@ -63,10 +63,10 @@ class CropDataset(Dataset):
 
         # if(self.transform1 is not None):
         image = self.transform1(image)
-        image = torchvision.transforms.functional.crop(image,top = int(target['bboxes'][0][3]),left = int(target['bboxes'][0][0]),width=240 ,height=240)
+        # image = torchvision.transforms.functional.crop(image,top = int(target['bboxes'][0][3]),left = int(target['bboxes'][0][0]),width=240 ,height=240)
         # image = torchvision.transforms.CenterCrop(240)
     
-        return image, label
+        return image[:,target['bboxes'][0][1]:target['bboxes'][0][3],target['bboxes'][0][0]:target['bboxes'][0][2]], label
     
 
 
@@ -75,6 +75,8 @@ class CropDataset(Dataset):
 data_transforms = {
     'train': transforms.Compose([
         transforms.ToTensor(),
+        
+        transforms.RandomApply([transforms.RandomAffine(10),transforms.ColorJitter()],p=0.5),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
     'val': transforms.Compose([
@@ -111,14 +113,19 @@ checkpoint = torch.load('models/pretext2.pt')
 model.load_state_dict(checkpoint['model_state_dict'])
 
 model = model.to(device)
-num_epochs=1
+num_epochs=100
 
 since = time.time()
 
 best_model_wts = copy.deepcopy(model.state_dict())
 best_acc = 0.0
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-2)
+optimizer = torch.optim.SGD(model.parameters(), lr=0.0005,
+                            momentum=0.9, weight_decay=0.0005)
+# and a learning rate scheduler
+lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
+                                                step_size=3,
+                                                gamma=0.1)
 # log_id = date.today()
 truth_images = []
 predict_images = []
@@ -159,6 +166,7 @@ for epoch in range(num_epochs):
                 if phase == 'train':
                     loss.backward()
                     optimizer.step()
+                    lr_scheduler.step()
  
             # statistics
             running_loss += loss.item() * inputs.size(0)

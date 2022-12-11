@@ -63,7 +63,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # model.load_state_dict(torch.load('best_model1.pt'))
 model = torch.load('best_model_2022-11-29.pt')
 model = model.to(device)
-num_epochs=5
+num_epochs=10
 
 since = time.time()
 
@@ -131,7 +131,7 @@ for epoch in range(num_epochs):
         if phase == 'val' and epoch_acc > best_acc:
             best_acc = epoch_acc
             best_model_wts = copy.deepcopy(model.state_dict())
-            torch.save(model,f'best_model_{log_id}.pt')
+            torch.save(model,f'best_backbone_{log_id}.pt')
 
 
 time_elapsed = time.time() - since

@@ -8,7 +8,6 @@ import utils
 from coco_eval import CocoEvaluator
 from coco_utils import get_coco_api_from_dataset
 from torch.utils.tensorboard import SummaryWriter
-from common_functions import dicts_common
 # writer = SummaryWriter()
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, writer,scaler=None):
@@ -34,18 +33,16 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, wr
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             loss_dict = model(images, targets)
-
-            loss_rpn_box_reg = loss_rpn_box_reg + loss_dict["loss_rpn_box_reg"]
-            loss_objectness = loss_objectness+loss_dict["loss_objectness"]
-            loss_classifier = loss_classifier + loss_dict["loss_classifier"]
-            loss_box_reg = loss_box_reg+loss_dict["loss_box_reg"]
-            '''STEP2 : ROI Loss'''
-            loss_dict = {key: loss_dict[key] for key in ("loss_classifier", "loss_box_reg")}
-            # losses = sum(loss for loss in loss_dict.values())
             '''STEP1 : RPN Loss'''
             # loss_dict = {key: loss_dict[key] for key in ("loss_objectness", "loss_rpn_box_reg")}
             losses = sum(loss for loss in loss_dict.values())
-
+            loss_rpn_box_reg = loss_rpn_box_reg + loss_dict["loss_rpn_box_reg"]
+            loss_objectness = loss_objectness+loss_dict["loss_objectness"]
+            '''STEP2 : ROI Loss'''
+            loss_dict = {key: loss_dict[key] for key in ("loss_classifier", "loss_box_reg")}
+            # losses = sum(loss for loss in loss_dict.values())
+            loss_classifier = loss_classifier + loss_dict["loss_classifier"]
+            loss_box_reg = loss_box_reg+loss_dict["loss_box_reg"]
 
 
 
@@ -139,76 +136,3 @@ def evaluate(model, data_loader, device):
     coco_evaluator.summarize()
     torch.set_num_threads(n_threads)
     return coco_evaluator
-
-
-# @torch.inference_mode()
-# def evaluate(model, data_loader, device,writer):
-#     n_threads = torch.get_num_threads()
-#     # FIXME remove this and make paste_masks_in_image run on the GPU
-#     torch.set_num_threads(1)
-#     cpu_device = torch.device("cpu")
-#     model.eval()
-#     metric_logger = utils.MetricLogger(delimiter="  ")
-#     header = "Test:"
-
-#     coco = get_coco_api_from_dataset(data_loader.dataset)
-#     iou_types = _get_iou_types(model)
-#     coco_evaluator = CocoEvaluator(coco, iou_types)
-
-#     d1,d2 = dicts_common()
-#     truth_images = []
-#     predict_images = []
-
-#     for images,targets in metric_logger.log_every(data_loader, 100, header):
-#         images = list(img.to(device) for img in images)
-
-#         if torch.cuda.is_available():
-#             torch.cuda.synchronize()
-#         model_time = time.time()
-#         outputs = model(images)
-
-#         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
-#         model_time = time.time() - model_time
-#         #print(targets)
-#         # for target, output in zip(targets, outputs):
-#         #   print(target)
-#         #   print(output)
-#         res = {target.item(): output for target, output in zip(targets["image_id"], outputs)}
-#         evaluator_time = time.time()
-#         coco_evaluator.update(res)
-#         evaluator_time = time.time() - evaluator_time
-#         metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
-
-
-#         p_boxes = [dic["boxes"] for dic in outputs]
-#         p_labels = [dic["labels"] for dic in outputs]
-
-#         #make sure x_min < x_max and y_min < y_max
-#         for i in range(len(p_boxes)):
-#             for j in range(len(p_boxes[i])):
-#                 if p_boxes[i][j][0] > p_boxes[i][j][2]:
-#                     p_boxes[i][j][2] = p_boxes[i][j][0] +1
-#                 if p_boxes[i][j][1] > p_boxes[i][j][3]:
-#                     p_boxes[i][j][3] = p_boxes[i][j][1] +1
-#         print(d2)
-#         print(len(targets))
-#         print(targets)
-
-#         truth_images.append([torchvision.utils.draw_bounding_boxes(torch.tensor(image,dtype=torch.uint8), targets["boxes"][i], labels=[d2[l.item()] for l in targets["labels"][i]] ) for i,image in enumerate(images)])
-#         predict_images.append([torchvision.utils.draw_bounding_boxes(torch.tensor(image,dtype=torch.uint8), p_boxes[i], labels=[d2[l.item()] for l in p_labels[i]] ) for i,image in enumerate(images)])
-#         #display predicted images on tesorboard
-    
-#     for i in range(len(truth_images)):
-#         writer.add_image("truth image: "  +str(i), truth_images[i])
-#         writer.add_image("predict image: "  +str(i), predict_images[i])
-
-#     # gather the stats from all processes
-#     metric_logger.synchronize_between_processes()
-#     print("Averaged stats:", metric_logger)
-#     coco_evaluator.synchronize_between_processes()
-
-#     # accumulate predictions from all images
-#     coco_evaluator.accumulate()
-#     coco_evaluator.summarize()
-#     torch.set_num_threads(n_threads)
-#     return coco_evaluator

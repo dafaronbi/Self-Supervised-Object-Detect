@@ -15,12 +15,13 @@ from torchvision.models.detection.rpn import AnchorGenerator
 from torch import nn
 #import transforms as T
 from torchvision import datasets, models, transforms
-from engine import *
+from engine2 import *
 from utils import *
 import time
 from torch.utils.data import Subset
-import albumentations as A
 from torch.utils.tensorboard import SummaryWriter
+import os
+
 
 train_data_path = "/labeled/labeled/training/"
 val_data_path = "/labeled/labeled/validation/"
@@ -31,17 +32,15 @@ def custom_collate_fn(batch):
     return tuple(zip(*batch))
 
 class ObjectDetection(torch.utils.data.Dataset):
-    def __init__(self, root,isTrain,transform1,transform2):
+    def __init__(self, root,transforms_data=None):
         self.root = root
-        self.transform1 = transform1
+        self.transforms = transforms_data
         self.images_folder = "images"
         self.labels_folder = "labels"
         # load all image files, sorting them to
         # ensure that they are aligned
         self.imgs = list(sorted(os.listdir(os.path.join(root, self.images_folder))))
         self.masks = list(sorted(os.listdir(os.path.join(root, self.labels_folder))))
-        self.transform2  = transform2
-        self.isTrain = isTrain
 
     def __getitem__(self, idx):
         # load images and masks
@@ -51,6 +50,7 @@ class ObjectDetection(torch.utils.data.Dataset):
         with open(target_path, 'r') as file:
             targets = yaml.safe_load(file)
         img = Image.open(img_path).convert("RGB")
+        # print(target_path)
 
         #---- TARGETS------
         target_return = {}
@@ -61,16 +61,14 @@ class ObjectDetection(torch.utils.data.Dataset):
         # print(self.masks[idx])
         # target_return['image_id'] = torch.as_tensor([int(self.masks[idx][:-4])],dtype=torch.int)
         target_return['image_id'] = torch.tensor([idx])
+        
+        # print(img.shape)
+        # convert_tensor = transforms.ToTensor()
+        # print((convert_tensor(img)).shape)
+        if self.transforms is not None:
+            img = self.transforms(img)
 
-
-        if self.transform1 is not None:
-            if(self.isTrain):
-                op = self.transform2(image=np.array(img), bboxes=target_return['boxes'], class_labels=target_return['labels'])
-                target_return['boxes'] = torch.as_tensor(op["bboxes"],dtype=torch.float32)
-                target_return['labels'] = torch.as_tensor(op["class_labels"])
-                img = op["image"]
-
-            img = self.transform1(img)
+        # print(img.shape)
 
         return img, target_return
 
@@ -121,73 +119,61 @@ def create_model(res50_custom,num_classes=100):
 
 
 
-transform2 = A.Compose([
-    A.HorizontalFlip(p=0.5),
-    A.RandomBrightnessContrast(p=0.2),
-], bbox_params=A.BboxParams(format='pascal_voc',label_fields=['class_labels']))
-
-transform1 = transforms.Compose([transforms.ToTensor(),
+transforms_data = transforms.Compose([transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
 
 # We then pass the original dataset and the indices we are interested in
-dataset = ObjectDetection(train_data_path,True,transform1,transform2)
-# train_indices = list(range(15000,20000))
+dataset = ObjectDetection(train_data_path,transforms_data)
+# train_indices = list(range(20000,25000))
 # dataset = Subset(dataset, train_indices)
-dataset_test = ObjectDetection(val_data_path,False,transform1,None)
+dataset_test = ObjectDetection(val_data_path,transforms_data)
 # test_indices = list(range(1000,1500))
 # dataset_test = Subset(dataset_test, test_indices)
+
+
 
 '''Step1 : RPN Training'''
 resnet50 = torch.load('models/best_backbone_2022-12-05.pt')
 model = create_model(resnet50,get_num_classes())
 
-''' Step2: ROI Training '''
+# ''' Step2: ROI Training '''
 # model = torch.load("models/bestObjDet_RPN.pt")
 # backbone = torch.nn.Sequential(*(list(resnet50.children())[:-1]))
 # backbone.out_channels = 2048
 # model.backbone = backbone
-# model = torch.load("bestObjDet_7.pt")
-
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 # define training and validation data loaders
-data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=False,num_workers=2, collate_fn=custom_collate_fn)
+data_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=False, num_workers=2,collate_fn=custom_collate_fn)
+data_loader_test = torch.utils.data.DataLoader(dataset_test,batch_size=1, shuffle=False)
 
-data_loader_test = torch.utils.data.DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=1)
 
-checkpoint_bb = torch.load('models/pretext2.pt')
-model_bb = models.resnet50()
-model_bb.load_state_dict(checkpoint_bb['model_state_dict'])
+
+checkpoint = torch.load('best_ee_0.pt')
+model.load_state_dict(checkpoint['model_state_dict'])
+checkpoint_epoch = checkpoint['epoch']
+model.to(device)
 
 # move model to the right device
-checkpoint = torch.load('models/best_stage3.pt')
-model.load_state_dict(checkpoint['model_state_dict'])
-model.backbone = torch.nn.Sequential(*(list(model_bb.children())[:-1]))
-checkpoint_epoch = checkpoint['epoch']
-model = model.to(device)
-
-# checkpoint = torch.load('models/best_ROI.pt')
-# model.load_state_dict(checkpoint['model_state_dict'])
-# model_rpn = torch.load('models/best_RPN.pt')
-# model.rpn = model_rpn.rpn
-# checkpoint_epoch = 0
-# del model_rpn
-# model.to(device)
+# model = torch.nn.DataParallel(model)
+# model =  nn.DataParallel(model).to(device)
+# model =  model.to(device)
+# available_gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
+# model = torch.nn.parallel.DistributedDataParallel(model, device_ids=available_gpus)
 
 
 # construct an optimizer
 # params = [p for p in model.backbone.parameters()] + [p for p in model.rpn.parameters() ]
-params = [p for p in model.backbone.parameters()] + [p for p in model.roi_heads.parameters() ]
-# params =  [p for p in model.parameters()]
-
-
-
+# params = [p for p in model.backbone.parameters()] + [p for p in model.roi_heads.parameters() ]
+params = [p for p in model.roi_heads.parameters() ]
+# params = [p for p in model.parameters()]
 
 optimizer = torch.optim.SGD(params, lr=0.001,
                             momentum=0.9, weight_decay=0.0005)
+# optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 # and a learning rate scheduler
 lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                 step_size=3,
@@ -212,13 +198,17 @@ for epoch in tqdm(range(checkpoint_epoch,num_epochs)):
     evaluate(model, data_loader_test, device=device)
     time_elapsed = time.time() - since
     print(time_elapsed)
-    # torch.save(model,f"bestObjDet_{epoch}.pt")
-    torch.save({
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        }, 'models/best_new.pt')
+    # torch.save(model,f"bestObj_ee_{epoch}.pt")
 
+    torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            }, 'best_ee_0.pt')
+
+
+
+torch.save(model,f'best_ee.pt')
 print("That's it!")
 
 
